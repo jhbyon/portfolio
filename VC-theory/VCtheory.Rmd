@@ -1,6 +1,6 @@
 ---
 title: "Conceptual Guidelines for Model Selection Based on VC Theory"
-author: "Leonardo Joon Hyun Byon"
+author: "Joon Hyun Byon"
 date: "June 30, 2016"
 output: pdf_document
 ---
