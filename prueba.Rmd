@@ -1,5 +1,0 @@
----
-title: "asdfasdf"
-output: html_document
----
-![optional caption text](asdfasdf-md.png)
