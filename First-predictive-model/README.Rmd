@@ -1,6 +1,6 @@
 ---
 title: "Prediction Models for the Bay Area Bike Sharing Program"
-author: "Joon Hyun Byon"
+author: "Joon Hyun Byon, Thomas Vicente"
 date: "December 4, 2015"
 output: pdf_document
 ---
