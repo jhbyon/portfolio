@@ -1,0 +1,256 @@
+drop database if exists `bike`;
+create database `bike`;
+use `bike`;
+
+CREATE TABLE STATION (
+  `station_id` INTEGER not NULL,
+  `name` varchar(60),
+  `lat` FLOAT(10,6),
+  `lng` FLOAT(10,6),
+  `dockcount` INTEGER,
+  `landmark` varchar(30),
+  `installation` text,
+  
+  PRIMARY KEY (`name`)
+);
+
+CREATE TABLE STATE (
+  `status_id` INT NOT NULL AUTO_INCREMENT,
+  `station_id` INTEGER not NULL,
+  `bikes_available` INTEGER not NULL,
+  `docks_available` INTEGER not NULL,
+  `time` text,
+  
+  PRIMARY KEY (`status_id`)
+);
+
+CREATE TABLE TRIPS (
+  `Trip_ID` INTEGER,
+  `Duration` INTEGER not NULL,
+  `Start_Date` text,
+  `Start_Station` varchar(60),
+  `Start_Terminal` INTEGER not NULL,
+  `End_Date` text,
+  `End_Station` varchar(60),
+  `End_Terminal` INTEGER not NULL,
+  `Bike_id` INTEGER not NULL,
+  `Subscription_Type` varchar(20),
+  `Zip_Code` varchar(10),
+  
+  PRIMARY KEY (`Trip_ID`)
+);
+
+CREATE TABLE WEATHER (
+  `WeatherId` INT NOT NULL AUTO_INCREMENT, 
+  `Date` TEXT,
+  `Max_Temperature_F` INTEGER,
+  `Mean_Temperature_F` INTEGER,
+  `Min_TemperatureF` INTEGER,
+  `Max_Dew_Point_F` INTEGER,
+  `MeanDew_Point_F` INTEGER,
+  `Min_Dewpoint_F` INTEGER,
+  `Max_Humidity` INTEGER,
+  `Mean_Humidity` INTEGER,
+  `Min_Humidity` INTEGER,
+  `Max_Sea_Level_Pressure_In` FLOAT(10,6),
+  `Mean_Sea_Level_Pressure_In` FLOAT(10,6),
+  `Min_Sea_Level_Pressure_In` FLOAT(10,6),
+  `Max_Visibility_Miles` INTEGER,
+  `Mean_Visibility_Miles` INTEGER,
+  `Min_Visibility_Miles` INTEGER,
+  `Max_Wind_Speed_MPH` INTEGER,
+  `Mean_Wind_Speed_MPH` INTEGER,
+  `Max_Gust_Speed_MPH` FLOAT(10,6) NULL DEFAULT '0.000000',
+  `Precipitation_In` FLOAT(10,6) NULL DEFAULT '0.000000',
+  `Cloud_Cover` INTEGER,
+  `Wind_Dir_Degrees` INTEGER,
+  `Events` varchar(10),
+  `zip` varchar(10),
+  
+  PRIMARY KEY (`WeatherId`)
+);
+
+
+/*UPDATE STATUS SET `date` = DATE_FORMAT(time, '%m-%d-%Y');
+ALTER TABLE STATUS ADD `timeonly` TIME;
+UPDATE STATUS SET `date` = DATE_FORMAT(time, '%H:%i:%s');
+ALTER TABLE STATUS DROP COLUMN `time`;
+
+*/
+
+-- Insert STATION
+load data local infile '/home/thomas/dataproject/201402_station_data.csv' 
+into table STATION 
+FIELDS TERMINATED BY ',' 
+IGNORE 1 LINES
+(`station_id`, `name`, `lat`, `lng`, `dockcount`, `landmark`, `installation`)
+;
+
+load data local infile '/home/thomas/dataproject/201408_station_data.csv' 
+into table STATION 
+FIELDS TERMINATED BY ',' 
+IGNORE 1 LINES
+(`station_id`, `name`, `lat`, `lng`, `dockcount`, `landmark`, `installation`)
+;
+
+load data local infile '/home/thomas/dataproject/201508_station_data.csv' 
+into table STATION 
+FIELDS TERMINATED BY ',' 
+IGNORE 1 LINES
+(`station_id`, `name`, `lat`, `lng`, `dockcount`, `landmark`, `installation`)
+;
+
+
+set SQL_SAFE_UPDATES = 0;
+update STATION set installation = STR_TO_DATE(`installation`, '%m/%d/%Y');
+
+
+-- Insert STATE
+load data local infile '/home/thomas/dataproject/201402_status_data.csv' 
+into table STATE 
+FIELDS TERMINATED BY ',' ENCLOSED BY '"'
+lines terminated by '\r\n'
+IGNORE 1 LINES
+(`station_id`,`bikes_available`, `docks_available`, `time`)
+;
+
+-- before running the following query find and replace "-" to "/" in 201408_status_data.csv
+-- to do so open the file with vi, and run :%s/-/\//g 
+load data local infile '/home/thomas/dataproject/201408_status_data.csv' 
+into table STATE 
+FIELDS TERMINATED BY ',' ENCLOSED BY '"'
+lines terminated by '\n'
+IGNORE 1 LINES
+(`station_id`,`bikes_available`, `docks_available`, `time`)
+;
+
+-- before running the following query find and replace "-" to "/" in 201508_status_data.csv
+-- to do so open the file with vi, and run :%s/-/\//g 
+load data local infile '/home/thomas/dataproject/201508_status_data.csv' 
+into table STATE 
+FIELDS TERMINATED BY ',' ENCLOSED BY '"'
+lines terminated by '\n'
+IGNORE 1 LINES
+(`station_id`,`bikes_available`, `docks_available`, `time`)
+;
+
+update STATE set time = REPLACE(`time`,'-','/');
+update STATE set time = STR_TO_DATE(`time`, '%Y/%m/%d %H:%i:%s');
+
+
+
+-- Insert TRIPS
+load data local infile '/home/thomas/dataproject/201402_trip_data.csv' 
+into table TRIPS 
+FIELDS TERMINATED BY ',' 
+lines terminated by '\r\n'
+IGNORE 1 LINES
+(`Trip_ID`,`Duration`,`Start_Date`,`Start_Station`,`Start_Terminal`, `End_Date`,`End_Station`,`End_Terminal`,`Bike_id`,
+  `Subscription_Type`,`Zip_Code`)
+;
+
+-- line 6911 has zipcode=53072336646. I set it to 0
+load data local infile '/home/thomas/dataproject/201408_trip_data.csv' 
+into table TRIPS 
+FIELDS TERMINATED BY ',' 
+lines terminated by '\n'
+IGNORE 1 LINES
+(`Trip_ID`,`Duration`,`Start_Date`,`Start_Station`,`Start_Terminal`, `End_Date`,`End_Station`,`End_Terminal`,`Bike_id`,
+  `Subscription_Type`,`Zip_Code`)
+;
+
+
+-- there are zipcodes like 94040-1724. I erased the minus and whatever comes after, left the first 5 digits
+-- there are zipcodes=nil. I set them to 0
+load data local infile '/home/thomas/dataproject/201508_trip_data.csv' 
+into table TRIPS 
+FIELDS TERMINATED BY ',' 
+lines terminated by '\n'
+IGNORE 1 LINES
+(`Trip_ID`,`Duration`,`Start_Date`,`Start_Station`,`Start_Terminal`, `End_Date`,`End_Station`,`End_Terminal`,`Bike_id`,
+  `Subscription_Type`,`Zip_Code`)
+;
+
+update TRIPS set Start_Date = STR_TO_DATE(`Start_Date`, '%m/%d/%Y %H:%i');
+update TRIPS set End_Date = STR_TO_DATE(`End_Date`, '%m/%d/%Y %H:%i');
+
+-- INSERT WEATHER
+-- Some lines have precipitation_in = T. I erased them, left the cell empty.
+load data local infile '/home/thomas/dataproject/201402_weather_data.csv' 
+into table WEATHER 
+FIELDS TERMINATED BY ',' 
+lines terminated by '\n'
+IGNORE 1 LINES
+(`Date`, `Max_Temperature_F`, `Mean_Temperature_F`, `Min_TemperatureF`, `Max_Dew_Point_F`, `MeanDew_Point_F`,
+ `Min_Dewpoint_F`, `Max_Humidity`, `Mean_Humidity`, `Min_Humidity`, `Max_Sea_Level_Pressure_In`, 
+ `Mean_Sea_Level_Pressure_In`, `Min_Sea_Level_Pressure_In`, `Max_Visibility_Miles`, `Mean_Visibility_Miles`,
+ `Min_Visibility_Miles`,`Max_Wind_Speed_MPH`, `Mean_Wind_Speed_MPH`,`Max_Gust_Speed_MPH`, `Precipitation_In`,
+ `Cloud_Cover`, `Events`, `Wind_Dir_Degrees` , `zip` )
+;
+
+load data local infile '/home/thomas/dataproject/201408_weather_data.csv' 
+into table WEATHER 
+FIELDS TERMINATED BY ',' 
+lines terminated by '\n'
+IGNORE 1 LINES
+(`Date`, `Max_Temperature_F`, `Mean_Temperature_F`, `Min_TemperatureF`, `Max_Dew_Point_F`, `MeanDew_Point_F`,
+ `Min_Dewpoint_F`, `Max_Humidity`, `Mean_Humidity`, `Min_Humidity`, `Max_Sea_Level_Pressure_In`, 
+ `Mean_Sea_Level_Pressure_In`, `Min_Sea_Level_Pressure_In`, `Max_Visibility_Miles`, `Mean_Visibility_Miles`,
+ `Min_Visibility_Miles`,`Max_Wind_Speed_MPH`, `Mean_Wind_Speed_MPH`,`Max_Gust_Speed_MPH`, `Precipitation_In`,
+ `Cloud_Cover`, `Events`, `Wind_Dir_Degrees` , `zip` )
+;
+ 
+load data local infile '/home/thomas/dataproject/201508_weather_data.csv' 
+into table WEATHER 
+FIELDS TERMINATED BY ',' 
+lines terminated by '\n'
+IGNORE 1 LINES
+(`Date`, `Max_Temperature_F`, `Mean_Temperature_F`, `Min_TemperatureF`, `Max_Dew_Point_F`, `MeanDew_Point_F`,
+ `Min_Dewpoint_F`, `Max_Humidity`, `Mean_Humidity`, `Min_Humidity`, `Max_Sea_Level_Pressure_In`, 
+ `Mean_Sea_Level_Pressure_In`, `Min_Sea_Level_Pressure_In`, `Max_Visibility_Miles`, `Mean_Visibility_Miles`,
+ `Min_Visibility_Miles`,`Max_Wind_Speed_MPH`, `Mean_Wind_Speed_MPH`,`Max_Gust_Speed_MPH`, `Precipitation_In`,
+ `Cloud_Cover`, `Events`, `Wind_Dir_Degrees` , `zip` )
+; 
+ 
+update WEATHER set `Date` = STR_TO_DATE(`Date`, '%m/%d/%Y'); 
+
+
+
+-- SMALL STATE FOR ANALYSIS
+
+drop table State;
+CREATE TABLE State (
+  `station_id` INTEGER not NULL,
+  `bikes_available` INTEGER not NULL,
+  `time` text
+);
+
+INSERT State (`time`, `station_id`, `bikes_available`)
+select SUBSTRING(time, 1, 13), station_id, AVG(bikes_available) 
+from STATE group by SUBSTRING(time, 1, 13), station_id; 
+
+
+
+drop table LOGIT_ANALYSIS;
+create table LOGIT_ANALYSIS (
+  `status_id` INTEGER,
+  `available` INTEGER,	
+  `station_id` INTEGER,
+  `station.clust`INTEGER,
+  `bikes_available` INTEGER,
+  `month` INTEGER,
+  `day` INTEGER,
+  `Times` INTEGER,
+  `weather.clust` INTEGER,
+  `temp` INTEGER
+  
+);
+
+load data local infile 'FINAL data for logit regression.csv' 
+into table LOGIT_ANALYSIS 
+FIELDS TERMINATED BY ',' 
+lines terminated by '\n'
+IGNORE 1 LINES
+(`status_id`,`available`,`station_id`,`station.clust`,`bikes_available`,`month`,`day`,`Times`,`weather.clust`,
+  `temp`)
+;
