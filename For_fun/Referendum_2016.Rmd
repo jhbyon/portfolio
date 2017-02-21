@@ -258,7 +258,7 @@ On February 21, 2016, a referendum was held in Bolivia in order to decide whethe
 The citizen participation rate was of 84.45%.
 
 ##Motivation
-The motivation for choosing this topic are multi-fold:
+The motivation for choosing this topic are two-fold:
 
 * Visualization of the results published by the media limited to presenting results at the "departamento" (or "state") level, hiding potentially rich patterns embedded in lower administrative divisions. Furthermore, the visualizations were complemented with traditional graphs, such as pie charts and bar charts, which not only are they static in nature, but again, given the tightly contested referendum, may also not suffice to provide a more holistic picture of the political landscape in Bolivia, as reflected by the results.
 
