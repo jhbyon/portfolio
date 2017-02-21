@@ -314,7 +314,7 @@ Map_departamentos<-leaflet() %>%
 
 Map_departamentos
 ```
-**_Figure 1: Referendum Results- Department level_**
+**_Figure 1: Referendum Results- State level_**
 
 ```{r echo=FALSE, eval=TRUE, warning=FALSE, comment=FALSE, fig.width=10}
 #nivel municipal
