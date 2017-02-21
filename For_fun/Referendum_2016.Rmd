@@ -1,0 +1,437 @@
+---
+title: "Data Visualization Project"
+author: "Leonardo Byon"
+date: "April 10, 2016"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+```{r echo=FALSE, eval=TRUE, warning=FALSE, message=FALSE}
+
+
+
+###########################################
+#       libraries and functions           #
+###########################################
+
+setwd("E:/BGSE/term 2/data visualization/dv project")
+
+if (!require(tmap)) install.packages("tmap"); library(tmap) #para visualizar mapas
+if (!require(tmaptools)) install.packages("tmaptools"); library(tmaptools) #para visualizar mapas
+if (!require(leaflet)) install.packages("leaflet"); library(leaflet) #para crear mapas leaflet
+if (!require(sp)) install.packages("sp"); library(sp) #para manipular shp
+if (!require(rio)) install.packages("rio"); library(rio) #para importar xlsx
+if (!require(dplyr)) install.packages("dplyr"); library(dplyr) #para importar xlsx
+if (!require(scales)) install.packages("scales"); library(scales) #para importar xlsx
+if (!require(ggplot2)) install.packages("ggplot2"); library(ggplot2) #para importar xlsx
+
+#function to check duplicate values within a variable 
+check_dup <- function(var){
+  
+  if (any(duplicated(var))){
+    return(unique(var[duplicated(var)]))
+  }
+  else {
+    print("no duplicados")
+  }
+}
+
+#function to check relational integrity between PK and FK
+keys_check<-function(parent, child) {
+  return (parent[(!sapply(parent, function(x) x %in% child))] )            
+}
+
+#function to substitute municipio entries in the POB dataset
+substitute_mun<-function(target_var, target_text, sub_text){
+  ind<-grep(pattern=tolower(target_text), x=tolower(target_var))
+  pob$Municipio[ind]<<-sub_text
+}
+
+###########################################
+#                 import                  #
+###########################################
+
+#importar shp
+municipio<-readRDS("shape3/BOL_adm3.rds")
+departamentos<-readRDS("shape3/BOL_adm1.rds")
+
+#importar resultados nacionales y municipales
+resultados_dep <-import("results/ResultadosBolivia2.xlsx")
+resultados_mun <- rbind(
+  import("results/ResultadosBeni.xlsx"),
+  import("results/ResultadosChuquisaca.xlsx"),
+  import("results/ResultadosCochabamba.xlsx"),
+  import("results/ResultadosLaPaz.xlsx"),
+  import("results/ResultadosOruro.xlsx"),
+  import("results/ResultadosPando.xlsx"),
+  import("results/ResultadosPotosi.xlsx"),
+  import("results/ResultadosSantaCruz.xlsx"),
+  import("results/ResultadosTarija.xlsx"))
+
+
+#importar poblacion municipal
+pob<-import("PC20103.xls", setclass="data.frame")[,1:3] #only year 2012 (officla census year)
+names(pob)<-c("Departamento", "Municipio", "pob2012")
+
+
+###########################################
+#                 clean                   #
+###########################################
+
+#check composite keys
+composite_key_mun <- paste(resultados_mun$Departamento, resultados_mun$Municipio, sep="-")
+composite_key_pob <- paste(pob$Departamento, pob$Municipio, sep="-")
+
+
+#check_dup(composite_key_mun) #no duplicate
+
+
+#check_dup(composite_key_pob) #1 duplicate
+#pob[which(composite_key_pob=="ORURO-Carangas"),] #170, 198
+pob<-pob[-170,]
+
+
+
+
+# match key values between resultados_mun$departamentos, $municipios y pob$deparamentos, $municipios and then inner join resultados_mun, pob
+#keys_check(resultados_mun$Municipio, pob$Municipio)
+#keys_check(pob$Municipio, resultados_mun$Municipio)
+
+substitute_mun(pob$Municipio, "rurrenaba", "Puerto Rurrenabaque")
+substitute_mun(pob$Municipio, "Guayaramer", "Puerto Guayaramerín")
+substitute_mun(pob$Municipio, "yacuma", "Santa Ana del Yacuma")
+substitute_mun(pob$Municipio, "azurduy", "Villa Azurduy")
+substitute_mun(pob$Municipio, "huacaya", "Villa de Huacaya")
+substitute_mun(pob$Municipio, "zudañe", "Villa Zudáñez")
+substitute_mun(pob$Municipio, "carabuco", "Puerto Carabuco")
+substitute_mun(pob$Municipio, "cuarahuara", "San Pedro de Curahuara")
+substitute_mun(pob$Municipio, "waldo ballivi", "Waldo Ballivián")
+substitute_mun(pob$Municipio, "Quillacas", "Santuario de Quillacas")
+substitute_mun(pob$Municipio, "Salinas de Gar", "Salinas de Garcí Mendoza")
+substitute_mun(pob$Municipio, "Santiago de Hu", "Santiago de Huari")
+substitute_mun(pob$Municipio, "villa nueva", "Villa Nueva")
+substitute_mun(pob$Municipio, "puerto gonzal", "Puerto Gonzalo Moreno")
+substitute_mun(pob$Municipio, "desacaca", "Sacaca")
+substitute_mun(pob$Municipio, "buena vista", "San Pedro de Buena Vista")
+substitute_mun(pob$Municipio, "caiza", "Caiza \"D\"")
+substitute_mun(pob$Municipio, "colcha", "Colcha \"K\"")
+substitute_mun(pob$Municipio, "lipez", "San Pablo de Lípez")
+substitute_mun(pob$Municipio, "chiquitos", "San José de Chiquitos")
+substitute_mun(pob$Municipio, "saavedra", "Agustín Saavedra")
+substitute_mun(pob$Municipio, "santiva", "Santiváñez")
+substitute_mun(pob$Municipio, "Santiago de andamarca", "Andamarca")
+substitute_mun(pob$Municipio, "Santa Cruz", "Santa Cruz de La Sierra")
+substitute_mun(pob$Municipio, "Shinahota", "SHINAHOTA")
+substitute_mun(pob$Municipio, "Humanata", "HUMANATA")
+substitute_mun(pob$Municipio, "Mapiri", "MAPIRI")
+substitute_mun(pob$Municipio, "Puerto Suarez", "Puerto Suárez")
+
+pob$Departamento[pob$Departamento=="CHUQUISACA"] <- "Chuquisaca"
+pob$Departamento[pob$Departamento=="LA PAZ"] <- "La Paz"
+pob$Departamento[pob$Departamento=="COCHABAMBA"] <- "Cochabamba"
+pob$Departamento[pob$Departamento=="ORURO"] <- "Oruro"
+pob$Departamento[pob$Departamento=="POTOSÍ"] <- "Potosi"
+pob$Departamento[pob$Departamento=="TARIJA"] <- "Tarija"
+pob$Departamento[pob$Departamento=="SANTA CRUZ"] <- "Santa Cruz"
+pob$Departamento[pob$Departamento=="BENI"] <- "El Beni"
+pob$Departamento[pob$Departamento=="PANDO"] <- "Pando"
+
+#join functions do not read tilde
+resultados_mun$Departamento[resultados_mun$Departamento=="Potosí"] <- "Potosi" 
+resultados_dep$Departamento[resultados_dep$Departamento=="Potosí"] <- "Potosi" 
+
+resultados_mun$Municipio[resultados_mun$Municipio=="Potosí"] <- "Potosi" 
+pob$Municipio[pob$Municipio=="Potosí"] <- "Potosi" 
+
+departamentos@data$NAME_1[departamentos@data$NAME_1=="Potosí"] <- "Potosi"
+municipio@data$NAME_1[municipio@data$NAME_1=="Potosí"] <- "Potosi"
+municipio@data$NAME_3[municipio@data$NAME_3=="Potosí"] <- "Potosi"
+
+
+#left join resultados_mun + pob
+#dim(resultados_mun) #312 x 10
+#dim(pob) #339 x 3
+
+resultados_mun<-left_join(resultados_mun, pob, by=c("Municipio"="Municipio", "Departamento"="Departamento"))
+#dim(resultados_mun) #312  11
+
+
+
+#check and correct dupliate entries in MUNICIPIOS columns, since leaflet does not allow joining using composite key
+#check_dup(municipio@data$NAME_3) #"Lago"       "Totora"     "San Javier" "San Ramón"  "El Puente" 
+#check_dup(resultados_mun$Municipio) #Totora, "San Javier" "San Ramón"  "El Puente" 
+
+#grep("San Javier", municipio@data$NAME_3) #73, 263
+#grep("San Javier", resultados_mun$Municipio) #1, 284
+
+municipio@data$NAME_3[73] <- resultados_mun$Municipio[1] <-"San Javier2"
+#------------------
+  
+#grep("San Ra", municipio@data$NAME_3) #81 265 295
+#grep("San Ra", resultados_mun$Municipio) #12 286 299
+
+municipio@data$NAME_3[81] <- resultados_mun$Municipio[12] <-"San Ramón2"
+municipio@data$NAME_3[265] <- resultados_mun$Municipio[286] <-"San Ramón3"
+#------------------
+
+
+#grep("Totor", municipio@data$NAME_3) #44 204
+#grep("Totor", resultados_mun$Municipio) #64 195
+
+municipio@data$NAME_3[44] <- resultados_mun$Municipio[64] <-"Totora2"
+#------------------
+
+#grep("El Puen", municipio@data$NAME_3) #261 313
+#grep("El Puen", resultados_mun$Municipio) #275 310
+
+municipio@data$NAME_3[261] <- resultados_mun$Municipio[275] <-"El Puente2"
+#------------------
+
+
+
+
+
+#check relationship between keys
+#keys_check(municipio@data$NAME_3, resultados_mun$Municipio)
+#[1] "Ayopaya"               "Ascensión de Guarayos" "Juan José Pérez"       "Lago"                 
+#[5] "Lago"                  "Lago"                  "Lago"                  "Lago"                 
+#[9] "Esmeralda"             "Ayacucho" 
+
+#keys_check(resultados_mun$Municipio, municipio@data$NAME_3)
+#"SHINAHOTA" "HUMANATA"  "MAPIRI"   
+
+
+###########################################
+#                 derive new variables   #
+###########################################
+
+#add vote results in percentage
+resultados_dep <- resultados_dep %>%
+  mutate(validos=resultados_dep$Si + resultados_dep$No,
+         Sipct=resultados_dep$Si/validos,
+         Nopct=resultados_dep$No/validos,
+         result=ifelse(Sipct > 0.5, 1, 0))
+
+
+resultados_mun <- resultados_mun %>%
+  mutate(validos=resultados_mun$Si + resultados_mun$No,
+         Sipct=resultados_mun$Si/validos,
+         Nopct=resultados_mun$No/validos,
+         result=ifelse(Sipct > 0.5, 1, 0))
+
+
+#create geographic coordinates for capital cities
+cities<-data.frame(matrix(nrow=9, ncol=3))
+
+capital=c("Santa Cruz de La Sierra", "La Paz", "Cochabamba", "Oruro", "Sucre", "Tarija", "Potosi", "Trinidad", "Cobija")
+
+for (i in 1:length(capital)){
+  ind=grep(capital[i], municipio@data$NAME_3)
+  cities[i,]=c(capital[i], round(mean(municipio[ind,]@bbox[2,]),2), round(mean(municipio[ind,]@bbox[1,]),2))
+  
+}
+
+names(cities)<-c("City", "Lat", "Long")
+
+
+
+###########################################
+#               single view               #
+###########################################
+
+#append df to map object
+ref_departamentos <- append_data(shp=departamentos, data=resultados_dep, key.shp = "NAME_1", key.data="Departamento")
+ref_municipio <- append_data(shp=municipio, data=resultados_mun, key.shp = "NAME_3", key.data="Municipio")
+
+```
+
+
+##Introduction
+On February 21, 2016, a referendum was held in Bolivia in order to decide whether the Constitution would be ammended to allow the current president and vice president to ran for a third consecutive term. Voters had to choose between in favor or against the ammendment: "Yes" or "No". Votes that were left in blank or nullified, for unspecified reasons, were also recorded as "Blank" and "Null". The results were as follows:
+
+* **Yes:** 51.3%
+* **No:** 48.7%
+* **Blank:** 1.25%
+* **Null:** 3.52%
+
+The citizen participation rate was of 84.45%.
+
+##Motivation
+The motivation for choosing this topic are multi-fold:
+
+* Visualization of the results published by the media limited to presenting results at the "departamento" (or "state") level, hiding potentially rich patterns embedded in lower administrative divisions. Furthermore, the visualizations were complemented with traditional graphs, such as pie charts and bar charts, which not only are they static in nature, but again, given the tightly contested referendum, may also not suffice to provide a more holistic picture of the political landscape in Bolivia, as reflected by the results.
+
+* The referendum was a close political race and a very important decision on the fate of Bolivia was made on the basis of a majority vote, with nail-biting, slim margins. It would be natural to wonder how robust are the results to stochastic processes.
+
+
+##Data
+The dataset consists of the official referendum results published by the "Plurinational Electoral Organ", the public office in charge of overseeing the elections, in their website (http://www.oep.org.bo/). Bolivia has 9 states, 112 provinces, 337 municipalities, and 1,374 sub-municipalities. The data set has been broken down up to the Municipal level, along with 6 main variables: number of people eligible to vote, number of people who voted, number of "Yes", "No", "Blank", and "Null" votes.
+
+##Visualizations
+#### Referendum Results
+In **Figure 1**, the national-level results per state have been presented, which, if taken at face value, gives the illusion that the geographic representation of the citizen's will is overwhelmingly against allowing a third consecutive, presidential term. On the other hand, **Figure 2** shows the results broken down for each municipality and presents a stark contrast. The pockets of red are in majority capital cities, urban areas, and territories that have been traditionally against the current governing party. As previously known, support for the the governing party comes, primarily, from the rural areas and the city of El Alto in La Paz.
+
+```{r echo=FALSE, eval=TRUE, warning=FALSE, comment=FALSE, fig.width=10}
+#nivel departamental
+resultpopup <- paste("<b>Departament: </b>", ref_departamentos@data$NAME_1, 
+                       "<br /><b>Yes: </b>", percent(ref_departamentos@data$Sipct), 
+                       "<b>NO: </b>", percent(ref_departamentos@data$Nopct))
+
+resultPalette <- colorFactor(palette=c("#e41a1c", "#00AF33"), domain = ref_departamentos$result)
+
+Map_departamentos<-leaflet() %>%
+  
+    setView(lng = -64.5, lat = -17, zoom = 5.2) %>%
+
+  addPolygons(data=ref_departamentos, 
+              stroke=TRUE, 
+              smoothFactor = 0.2, 
+              fillOpacity = .75,
+              weight=2,
+              popup=resultpopup, 
+              color= ~resultPalette(ref_departamentos@data$result),
+              group="Results") %>%
+  
+  addPolygons(data=departamentos, weight=1, fill=FALSE, stroke=TRUE, color="black") %>%
+  
+
+  
+  addLegend(title="State-level Results", 
+            position="topright", 
+            colors=c("#e41a1c", "#00AF33", "#e5e500"), 
+            labels=c("No (51.3%)", "Yes (48.7%)", "Capital")) %>%
+
+  addCircles(data=cities,
+             lng = ~Long, 
+             lat = ~Lat, 
+             weight = 2,
+             opacity=1,
+             fill=TRUE,
+             color="#f3ff1c",
+             fillOpacity = 1,
+             radius = 9000) 
+
+Map_departamentos
+```
+**_Figure 1: Referendum Results- Department level_**
+
+```{r echo=FALSE, eval=TRUE, warning=FALSE, comment=FALSE, fig.width=10}
+#nivel municipal
+resultpopup <- paste("<b>Municipality: </b>", ref_municipio@data$NAME_3, 
+                     "<br /><b>Yes: </b>", percent(ref_municipio@data$Sipct), 
+                     "<b>NO: </b>", percent(ref_municipio@data$Nopct))
+
+resultPalette <- colorFactor(palette=c("#e41a1c", "#00AF33"), domain = ref_municipio$result)
+
+
+Map_municipio<-leaflet() %>%
+  
+    setView(lng = -64.5, lat = -17, zoom = 5.2) %>%
+
+  
+  addPolygons(data=ref_municipio, stroke=TRUE, 
+              smoothFactor = 0.2, 
+              fillOpacity = .75,
+              weight=2,
+              popup=resultpopup, 
+              color= ~resultPalette(ref_municipio@data$result)) %>%
+  
+  addPolygons(data=departamentos, weight=1, fill=FALSE, stroke=TRUE, color="black") %>%
+  
+  
+  addLegend(title="Municipal-level Results", 
+            position="topright", 
+            colors=c("#e41a1c", "#00AF33", "#939393", "#e5e500"), 
+            labels=c("No (51.3%)", "Yes (48.7%)", "NA", "Capital")) %>%
+  
+  addCircles(data=cities,
+             lng = ~Long, 
+             lat = ~Lat, 
+             weight = 2,
+            opacity=1,
+            fill=TRUE,
+            color="#f3ff1c",
+            fillOpacity = 1,
+             radius = 9000)
+
+Map_municipio
+```
+**_Figure 2: Referendum Results- Municipality level_**. *The file to render the image had some municipalities missing, and the referendum results for these municipalities have been omitted, and presented as NA.*
+
+
+Another way to visualize the ideological divide between urban and non-urban areas is by vote results as a function of population size, where a slight negative correlation can be observed with a heavy negative weight contributed by capital cities.
+
+```{r echo=FALSE, eval=TRUE, warning=FALSE, comment=FALSE, fig.width=10,fig.height=13}
+#population vs voto
+
+resultados_mun$capital<- ifelse(resultados_mun$Municipio %in% capital, 1, 0)
+resultados_mun$Departamento<-factor(resultados_mun$Departamento, levels=c("La Paz", "Cochabamba", "Oruro", "Potosi", "Pando", "Chuquisaca", "Tarija", "Santa Cruz", "El Beni"))
+
+pop_vs_voto<-ggplot(resultados_mun, aes(x=log(pob2012), y=Sipct))+
+  geom_point(aes(colour=Sipct, shape=factor(capital, labels=c("Non-capital", "Capital"))), size=4)+
+  facet_grid(factor(Departamento) ~.)+
+  scale_colour_gradient(limits=c(min(resultados_mun$Sipct), max(resultados_mun$Sipct)), low="red", high="green", "Percentage of 'Yes' Votes")+
+  geom_hline(data=data.frame(Departamento=unique(resultados_mun$Departamento), Z=rep(0.5, 9)), aes(yintercept=Z), colour="blue")+
+  labs(shape="Type of Municipality")+
+  scale_x_continuous(name="ln(Population 2012)")+
+  scale_y_continuous(name="Percentage of 'Yes' Votes")
+
+pop_vs_voto
+```
+
+
+####Robustness of the Vote
+The robustness of the vote was evaluated  by recording the result of 1,000 bootstrapped samples for each state The results are presented in **Figure 4** and we can observe the presence of three clusters: 1) Pro-governing party (La Paz, Cochabamba, Oruro), 2) Non-robust states (Potosi, Pando, Chuquisaca), and 3) Anti-governing party (Tarija, Santa Cruz, El Beni). Sensitivity analysis shows that a "Yes" majority could have been obtained if the governing party captured at least 57% of votes in each of the non-robust states 
+Such visualizations could help politicians identify geographic territories that require close monitoring and focused campaigning.
+
+
+```{r echo=FALSE, eval=TRUE, warning=FALSE, comment=FALSE, fig.width=10}
+#permutation test
+statenames<-unique(resultados_mun$Departamento)
+
+# Bootstrap 95% CI for regression coefficients 
+
+suppressMessages(library(boot, warn.conflicts = FALSE, quietly=TRUE))
+
+###bootstrap
+boottest<-function(df,index){
+  d <- df[index,]
+  PctSi<-sum(d$Si)/sum(d$Si+d$No)
+  return(PctSi)
+  }
+
+boot_results<-as.data.frame(matrix(NA, nrow=1000,ncol=length(statenames)))
+names(boot_results)<-statenames
+
+set.seed(0)
+for (i in statenames){
+  subset<-resultados_mun[which(resultados_mun$Departamento==i),]
+  boot_results[,i]<-boot(data=subset, statistic=boottest, R=1000)$t
+}
+
+
+boxplot_data<-as.data.frame(matrix(NA, nrow=5, ncol=length(statenames)))
+row.names(boxplot_data)<-c(0.025,.25,.5,.75,0.975)
+names(boxplot_data)<-statenames
+
+
+for (i in statenames){
+  boxplot_data[,i]<-as.numeric(quantile(boot_results[,i], c(0.025,.25,.5,.75,0.975)))
+}
+
+boxplot_data<-as.data.frame(t(boxplot_data))
+boxplot_data$Departamento <- rownames(boxplot_data)
+boxplot_data<-inner_join(boxplot_data, resultados_dep, by=c("Departamento"="Departamento"))
+boxplot_data$Departamento<-factor(boxplot_data$Departamento, levels=c("La Paz", "Cochabamba", "Oruro", "Potosi", "Pando", "Chuquisaca", "Tarija", "Santa Cruz", "El Beni"))
+
+
+b <- ggplot(boxplot_data, aes(x = Departamento, ymin = `0.025`, lower = `0.25`, middle = `0.5`, upper = `0.75`, ymax = `0.975`))
+b + geom_boxplot(stat = "identity")+
+  geom_hline(yintercept=0.5, colour="blue") + 
+  geom_point(data=cbind(boxplot_data, data.frame(Z=1)), aes(x=Departamento, y=Sipct, shape=factor(Z, labels="Actual Result")), colour="red") +
+  labs(x="State", y="Percentage of 'Yes' Votes") +
+  labs(shape="")+
+  theme(axis.text=element_text(size=8), axis.title=element_text(size=14), plot.title=element_text(size=20))
+```
